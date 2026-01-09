@@ -29,13 +29,40 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
+ * A task that runs a [Job].
+ *
+ * Use this when you don't want to specify anything about the task
+ * other than the fact it's a job from [kotlinx.coroutines].
+ */
+public sealed class JobTask: Task {
+
+    override val name: String = javaClass.simpleName
+
+    /**
+     * A task job that's been started via [runBlocking].
+     */
+    public object RunBlocking: JobTask()
+
+    /**
+     * A task job that's been started via [launch].
+     */
+    public object Launch: JobTask()
+
+    /**
+     * A task job that's been started via [async].
+     */
+    public object Async: JobTask()
+
+}
+
+/**
  * Runs a coroutine task via [runBlocking].
  *
  * @param task The task to run the coroutine as.
  * @param block The coroutine code.
  */
 public fun <R> runBlockingTask(
-    task: Task,
+    task: Task = JobTask.RunBlocking,
     concurrentTaskBehavior: ConcurrentTaskBehavior =
         ConcurrentTaskBehavior.IGNORE,
     context: CoroutineContext = EmptyCoroutineContext,
@@ -105,7 +132,7 @@ public fun <R> TaskRunnable<R>.runBlocking(
  * @param block The coroutine code.
  */
 public fun <R> LiveTaskContextScope.runBlockingTask(
-    task: Task,
+    task: Task = JobTask.RunBlocking,
     context: CoroutineContext = EmptyCoroutineContext,
     block: suspend LiveTaskContextScope.() -> R,
 ): R = runBlocking(context) {
@@ -166,7 +193,7 @@ public fun <R> TaskRunnable<R>.runBlocking(
  */
 context(taskScope: LiveTaskContextScope)
 public fun CoroutineScope.launchTask(
-    task: Task,
+    task: Task = JobTask.Launch,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
     block: suspend LiveTaskContextScope.() -> Unit,
@@ -231,7 +258,7 @@ public fun TaskRunnable<Unit>.launch(
  */
 context(taskScope: LiveTaskContextScope)
 public fun <R> CoroutineScope.asyncTask(
-    task: Task,
+    task: Task = JobTask.Async,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
     block: suspend LiveTaskContextScope.() -> R,

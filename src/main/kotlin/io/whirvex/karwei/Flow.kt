@@ -52,7 +52,7 @@ public class TaskFlowResult<R : Any?> {
         set(value) = lock.write {
             if (computedResult) {
                 val message = "Result already computed for task"
-                throw NoSuchElementException(message)
+                throw IllegalStateException(message)
             }
             this.computedResult = true
             field = value

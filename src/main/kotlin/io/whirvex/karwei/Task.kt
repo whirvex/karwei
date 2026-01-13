@@ -23,6 +23,8 @@
  */
 package io.whirvex.karwei
 
+import kotlinx.coroutines.CoroutineScope
+
 /**
  * A task that can be accomplished.
  *
@@ -53,6 +55,13 @@ internal constructor(
 public fun task(name: String): Task = NamedTask(name)
 
 /**
+ * The function signature for a runnable task.
+ */
+public typealias TaskRunnableBlock<R> =
+        suspend context(CoroutineScope)
+        LiveTaskContextScope.() -> R
+
+/**
  * A task that can be executed.
  *
  * @property task The task to execute.
@@ -62,7 +71,7 @@ public fun task(name: String): Task = NamedTask(name)
 public data class TaskRunnable<out R>
 internal constructor(
     public val task: Task,
-    public val block: suspend LiveTaskContextScope.() -> R,
+    public val block: TaskRunnableBlock<R>,
 )
 
 /**
@@ -72,7 +81,7 @@ internal constructor(
  * @return A runnable task.
  */
 public fun <R> Task.runnable(
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): TaskRunnable<R> = TaskRunnable(
     task = this,
     block = block,
@@ -87,7 +96,7 @@ public fun <R> Task.runnable(
  * @return A runnable task.
  */
 public operator fun <R> Task.invoke(
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): TaskRunnable<R> = runnable(block)
 
 /**
@@ -99,7 +108,7 @@ public operator fun <R> Task.invoke(
  */
 public fun <R> task(
     name: String,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): TaskRunnable<R> {
     val task = NamedTask(name)
     val section = TaskRunnable(task, block)

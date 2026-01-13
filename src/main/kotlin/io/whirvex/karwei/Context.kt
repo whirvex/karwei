@@ -24,6 +24,7 @@
 package io.whirvex.karwei
 
 import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.yield
 import java.util.concurrent.locks.ReentrantLock
 
@@ -372,7 +373,7 @@ internal constructor() : TaskContext {
 
             val scope = LiveTaskContextScope(taskContext = this)
             TaskBeginEvent(task, this).emit()
-            val result = scope.block()
+            val result = coroutineScope { scope.block() }
 
             /*
              * Ensure *before* sending the finish event. Even if the block

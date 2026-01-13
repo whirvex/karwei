@@ -66,7 +66,7 @@ public fun <R> runBlockingTask(
     concurrentTaskBehavior: ConcurrentTaskBehavior =
         ConcurrentTaskBehavior.IGNORE,
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = runBlocking(context) {
     LiveTaskContext().enter(
         events = null,
@@ -86,7 +86,7 @@ public fun <R> runBlockingTask(
     concurrentTaskBehavior: ConcurrentTaskBehavior =
         ConcurrentTaskBehavior.IGNORE,
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = runBlockingTask(
     task = NamedTask(name),
     concurrentTaskBehavior = concurrentTaskBehavior,
@@ -103,7 +103,7 @@ public fun <R> Task.runBlocking(
     concurrentTaskBehavior: ConcurrentTaskBehavior =
         ConcurrentTaskBehavior.IGNORE,
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = runBlockingTask(
     task = this,
     concurrentTaskBehavior = concurrentTaskBehavior,
@@ -134,7 +134,7 @@ public fun <R> TaskRunnable<R>.runBlocking(
 public fun <R> LiveTaskContextScope.runBlockingTask(
     task: Task = JobTask.RunBlocking,
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = runBlocking(context) {
     LiveTaskContext().enter(
         parent = this@runBlockingTask.taskContext,
@@ -151,7 +151,7 @@ public fun <R> LiveTaskContextScope.runBlockingTask(
 public fun <R> LiveTaskContextScope.runBlockingTask(
     name: String,
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = runBlockingTask(
     task = NamedTask(name),
     context = context,
@@ -166,7 +166,7 @@ public fun <R> LiveTaskContextScope.runBlockingTask(
 context(taskScope: LiveTaskContextScope)
 public fun <R> Task.runBlocking(
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): R = taskScope.runBlockingTask(
     task = this,
     context = context,
@@ -196,7 +196,7 @@ public fun CoroutineScope.launchTask(
     task: Task = JobTask.Launch,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
-    block: suspend LiveTaskContextScope.() -> Unit,
+    block: TaskRunnableBlock<Unit>,
 ): Job = launch(context, start) {
     LiveTaskContext().enter(
         parent = taskScope.taskContext,
@@ -215,7 +215,7 @@ public fun CoroutineScope.launchTask(
     name: String,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
-    block: suspend LiveTaskContextScope.() -> Unit,
+    block: TaskRunnableBlock<Unit>,
 ): Job = launchTask(
     task = NamedTask(name),
     context = context,
@@ -231,7 +231,7 @@ public fun CoroutineScope.launchTask(
 context(_: LiveTaskContextScope, coroutineScope: CoroutineScope)
 public fun Task.launch(
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> Unit,
+    block: TaskRunnableBlock<Unit>,
 ): Job = coroutineScope.launchTask(
     task = this,
     context = context,
@@ -261,7 +261,7 @@ public fun <R> CoroutineScope.asyncTask(
     task: Task = JobTask.Async,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): Deferred<R> = async(context, start) {
     LiveTaskContext().enter(
         parent = taskScope.taskContext,
@@ -280,7 +280,7 @@ public fun <R> CoroutineScope.asyncTask(
     name: String,
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): Deferred<R> = asyncTask(
     task = NamedTask(name),
     context = context,
@@ -296,7 +296,7 @@ public fun <R> CoroutineScope.asyncTask(
 context(_: LiveTaskContextScope, coroutineScope: CoroutineScope)
 public fun <R> Task.async(
     context: CoroutineContext = EmptyCoroutineContext,
-    block: suspend LiveTaskContextScope.() -> R,
+    block: TaskRunnableBlock<R>,
 ): Job = coroutineScope.asyncTask(
     task = this,
     context = context,

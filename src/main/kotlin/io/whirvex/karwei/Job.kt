@@ -297,7 +297,7 @@ context(_: LiveTaskContextScope, coroutineScope: CoroutineScope)
 public fun <R> Task.async(
     context: CoroutineContext = EmptyCoroutineContext,
     block: TaskRunnableBlock<R>,
-): Job = coroutineScope.asyncTask(
+): Deferred<R> = coroutineScope.asyncTask(
     task = this,
     context = context,
     block = block,
@@ -309,7 +309,7 @@ public fun <R> Task.async(
 context(_: LiveTaskContextScope, coroutineScope: CoroutineScope)
 public fun <R> TaskRunnable<R>.async(
     context: CoroutineContext = EmptyCoroutineContext,
-): Job = coroutineScope.asyncTask(
+): Deferred<R> = coroutineScope.asyncTask(
     task = task,
     context = context,
     block = block,

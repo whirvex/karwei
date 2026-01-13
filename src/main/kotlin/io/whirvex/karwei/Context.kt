@@ -343,17 +343,14 @@ internal constructor() : TaskContext {
     private suspend fun <R> start(
         runnable: TaskRunnable<R>,
     ): R {
-        val task = runnable.task
-
         fun setup() {
-            this._task = task
             this._isActive = true
             this._isCompleted = true
             parent?._children?.add(this)
         }
 
         fun cleanup() {
-            parent?._children -= this
+            parent?._children?.remove(this)
             this._isCompleted = true
             this._isActive = false
             this._task = null
@@ -412,6 +409,7 @@ internal constructor() : TaskContext {
         try {
             this.setEnteredFlag()
 
+            this._task = runnable.task
             this._parent = parent
             this._events = events
             this._concurrentTaskBehavior = concurrentTaskBehavior

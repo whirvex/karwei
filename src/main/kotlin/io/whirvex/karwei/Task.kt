@@ -50,9 +50,36 @@ internal constructor(
 ) : Task
 
 /**
+ * An anonymous task with no data.
+ */
+public class AnonymousTask
+internal constructor() : Task {
+    override val name: String = "<anonymous task>"
+}
+
+/**
  * Creates a task with the given name.
  */
 public fun task(name: String): Task = NamedTask(name)
+
+/**
+ * Creates an anonymous tasks with no name.
+ */
+public fun task(): Task = AnonymousTask()
+
+/**
+ * Returns if this task is anonymous.
+ *
+ * This is a shorthand for `is AnonymousTask`.
+ */
+public fun Task.isAnonymous(): Boolean = this is AnonymousTask
+
+/**
+ * Returns if this task is **not** anonymous.
+ *
+ * This is a shorthand for `!isAnonymous()`.
+ */
+public fun Task.isNotAnonymous(): Boolean = !this.isAnonymous()
 
 /**
  * The function signature for a runnable task.
@@ -111,6 +138,20 @@ public fun <R> task(
     block: TaskRunnableBlock<R>,
 ): TaskRunnable<R> {
     val task = NamedTask(name)
+    val section = TaskRunnable(task, block)
+    return section
+}
+
+/**
+ * Shorthand to make an anonymous executable task.
+ *
+ * @param block The code to execute.
+ * @return A runnable task with the given name.
+ */
+public fun <R> task(
+    block: TaskRunnableBlock<R>,
+): TaskRunnable<R> {
+    val task = AnonymousTask()
     val section = TaskRunnable(task, block)
     return section
 }

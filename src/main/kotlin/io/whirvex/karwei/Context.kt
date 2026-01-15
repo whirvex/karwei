@@ -300,7 +300,7 @@ internal constructor() : TaskContext {
     ): R {
         fun setup() {
             this._isActive = true
-            this._isCompleted = true
+            this._isCompleted = false
             parent?._children?.add(this)
         }
 

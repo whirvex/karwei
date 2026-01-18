@@ -24,10 +24,12 @@
 package io.whirvex.karwei
 
 import kotlinx.coroutines.channels.ProducerScope
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import org.jetbrains.annotations.VisibleForTesting
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Signals that a task concurrency error has occurred.
@@ -249,7 +251,6 @@ internal constructor() : TaskContext {
     private var contextEntered = false
 
     private var _events: ProducerScope<TaskEvent>? = null
-    private var _allowConcurrentTasks: Boolean? = null
 
     private var _task: Task? = null
     private var _parent: LiveTaskContext? = null
@@ -262,12 +263,9 @@ internal constructor() : TaskContext {
     internal val events: ProducerScope<TaskEvent>?
         get() = this._events
 
-    internal val allowConcurrentTasks: Boolean
-        get() = this._allowConcurrentTasks!!
-
     override val task: Task
         get() {
-            val field = _task
+            val field = this._task
             if (field == null) {
                 val message = "No task currently running"
                 throw IllegalStateException(message)
@@ -336,18 +334,6 @@ internal constructor() : TaskContext {
         }
     }
 
-    private fun enforceConcurrentBehavior() {
-        if (allowConcurrentTasks) {
-            return /* nothing to check for */
-        }
-        val firstborn = parent?._children?.firstOrNull()
-        if (firstborn != null) {
-            val name = firstborn.task.name
-            val message = "Sibling task \"$name\" still running"
-            throw ConcurrentTaskException(task, message)
-        }
-    }
-
     private suspend fun <R> start(
         runnable: TaskRunnable<R>,
     ): R {
@@ -378,7 +364,9 @@ internal constructor() : TaskContext {
 
             val scope = LiveTaskContextScope(taskContext = this)
             TaskBeginEvent(task, this).emit()
-            val result = coroutineScope { scope.block() }
+            val result = withContext(LiveTaskContextElement(this)) {
+                scope.block()
+            }
 
             /*
              * Ensure *before* sending the finish event. Even if the block
@@ -410,7 +398,6 @@ internal constructor() : TaskContext {
     private suspend fun <R> enter(
         parent: LiveTaskContext?,
         events: ProducerScope<TaskEvent>?,
-        allowConcurrentTasks: Boolean,
         runnable: TaskRunnable<R>,
     ): R {
         contextLock.lock()
@@ -420,10 +407,8 @@ internal constructor() : TaskContext {
             this._task = runnable.task
             this._parent = parent
             this._events = events
-            this._allowConcurrentTasks = allowConcurrentTasks
 
             this.ensureLivingParent()
-            this.enforceConcurrentBehavior()
             return this.start(runnable)
         } finally {
             contextLock.unlock()
@@ -432,12 +417,10 @@ internal constructor() : TaskContext {
 
     internal suspend fun <R> enter(
         events: ProducerScope<TaskEvent>?,
-        allowConcurrentTasks: Boolean,
         runnable: TaskRunnable<R>,
     ): R = enter(
         parent = null,
         events = events,
-        allowConcurrentTasks = allowConcurrentTasks,
         runnable = runnable,
     )
 
@@ -447,9 +430,23 @@ internal constructor() : TaskContext {
     ): R = enter(
         parent = parent,
         events = parent.events,
-        allowConcurrentTasks = parent.allowConcurrentTasks,
         runnable = runnable,
     )
+
+}
+
+private val TaskContext.taskNameOrDead
+    get() = if (isActive) task.name else "<dead task>"
+
+internal class LiveTaskContextElement(
+    val taskContext: LiveTaskContext,
+) : AbstractCoroutineContextElement(key = LiveTaskContextElement) {
+
+    companion object Key :
+        CoroutineContext.Key<LiveTaskContextElement>
+
+    override fun toString(): String =
+        "LiveTaskContextElement(${taskContext.taskNameOrDead})"
 
 }
 

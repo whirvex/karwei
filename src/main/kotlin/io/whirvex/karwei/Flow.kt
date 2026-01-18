@@ -77,24 +77,13 @@ public class TaskFlowResult<R : Any?> {
 
 }
 
-private fun <R> TaskRunnable<R>.baseTaskFlow(
-    allowConcurrentTasks: Boolean,
-): Flow<TaskEvent> = channelFlow {
-    LiveTaskContext().enter(
-        events = this@channelFlow,
-        allowConcurrentTasks = allowConcurrentTasks,
-        runnable = this@baseTaskFlow,
-    )
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun <S : Any?, R : S> TaskRunnable<R>.processEvent(
-    it: TaskEvent, result: TaskFlowResult<S>,
-) {
-    if (it.task == task && it is TaskFinishEvent) {
-        result.value = it.result as R
+private fun <R> TaskRunnable<R>.baseTaskFlow(): Flow<TaskEvent> =
+    channelFlow {
+        LiveTaskContext().enter(
+            events = this@channelFlow,
+            runnable = this@baseTaskFlow,
+        )
     }
-}
 
 /**
  * Creates an instance of a _cold_ [Flow] that emits events related
@@ -105,22 +94,27 @@ private fun <S : Any?, R : S> TaskRunnable<R>.processEvent(
  * in [result] will be overwritten on subsequent invocations.
  *
  * @param result Where to write the result to.
- * @param allowConcurrentTasks Whether multiple sibling tasks can execute
- * at the same time. If not, an exception will be thrown if another task is
- * started while a sibling is still running.
  * @throws IllegalArgumentException If [result] already has a value.
  */
+@Suppress("UNCHECKED_CAST")
 public fun <S : Any?, R : S> TaskRunnable<R>.taskFlow(
     result: TaskFlowResult<S>?,
-    allowConcurrentTasks: Boolean = true,
 ): Flow<TaskEvent> {
     if (result?.computedResult == true) {
-        val message = "Result already has a value"
-        throw IllegalArgumentException(message)
+        val msg = "Result already has a value"
+        throw IllegalArgumentException(msg)
     }
-    val flow = baseTaskFlow(allowConcurrentTasks)
-    return if (result == null) flow
-    else flow.onEach { processEvent(it, result) }
+
+    val flow = baseTaskFlow()
+    if (result == null) {
+        return flow /* no event processing needed */
+    }
+
+    return flow.onEach {
+        if (it.task == task && it is TaskFinishEvent) {
+            result.value = it.result as R
+        }
+    }
 }
 
 /**
@@ -129,11 +123,6 @@ public fun <S : Any?, R : S> TaskRunnable<R>.taskFlow(
  *
  * Like other cold flows, the runnable is called every time a terminal
  * operator is applied to the resulting flow.
- *
- * @param allowConcurrentTasks Whether multiple sibling tasks can execute
- * at the same time. If not, an exception will be thrown if another task is
- * started while a sibling is still running.
  */
-public fun TaskRunnable<Unit>.taskFlow(
-    allowConcurrentTasks: Boolean = true,
-): Flow<TaskEvent> = baseTaskFlow(allowConcurrentTasks)
+public fun TaskRunnable<Unit>.taskFlow(): Flow<TaskEvent> =
+    baseTaskFlow()

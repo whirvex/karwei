@@ -40,7 +40,7 @@ public sealed class TaskEvent(
     /**
      * The context the event occurred in.
      */
-    public val context: TaskContext = StaticTaskContext(context)
+    public val context: TaskContext = context.toStatic()
 
     /**
      * The exact time at which this event occurred

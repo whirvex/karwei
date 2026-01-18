@@ -140,8 +140,49 @@ public interface TaskContext {
 
 }
 
-private fun List<LiveTaskContext>.toStatic() =
-    map { StaticTaskContext(context = it) }
+private fun LiveTaskContext.getRoot(): LiveTaskContext {
+    return parent?.getRoot() ?: this
+}
+
+@VisibleForTesting
+internal fun LiveTaskContext.toStatic(): StaticTaskContext {
+    var captured: StaticTaskContext? = null
+
+    /*
+     * We start from the root context and work our way down. If we
+     * don't do this, the parent context (if any) won't be converted
+     * to a static context which is not what we want.
+     *
+     * The callback lets us know when the target context is actually
+     * converted, and gives us the instance directly so we can return
+     * it to the caller. This way, we don't need to traverse our way
+     * down the root static context to locate the target ourselves.
+     */
+    StaticTaskContext(
+        context = this.getRoot(),
+    ) { context, converted ->
+        if (context !== this) {
+            return@StaticTaskContext /* nothing to do */
+        } else if (captured != null) {
+            val msg = "Context already converted, this is a bug!"
+            throw IllegalStateException(msg)
+        }
+        captured = converted
+    }
+
+    if (captured == null) {
+        val msg = "Context never converted, this is a bug!"
+        throw IllegalStateException(msg)
+    }
+
+    return captured
+}
+
+private fun List<LiveTaskContext>.toStatic(
+    onConvert: (LiveTaskContext, StaticTaskContext) -> Unit,
+) = map { context ->
+    StaticTaskContext(context, onConvert)
+}
 
 /**
  * Snapshot context of a [Task] at a certain point in time.
@@ -181,6 +222,7 @@ private constructor(
 
     internal constructor(
         context: LiveTaskContext,
+        onConvert: (LiveTaskContext, StaticTaskContext) -> Unit,
     ) : this(
         task = context.task,
         level = context.level,
@@ -188,10 +230,11 @@ private constructor(
         isCompleted = context.isCompleted,
         isFailed = context.isFailed,
         failureCause = context.failureCause,
-        children = context.children.toStatic(),
+        children = context.children.toStatic(onConvert),
     ) {
         children.forEach { it._parent = this }
         this._logger = StaticTaskLogger(context = this)
+        onConvert(context, this)
     }
 
 }

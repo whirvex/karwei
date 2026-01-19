@@ -23,6 +23,36 @@
  */
 package io.whirvex.karwei
 
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertIs
+
 internal class EventTest {
-    /* TODO: unit tests */
+
+    @Test
+    fun taskEventsContainStaticContext(): Unit = runBlocking {
+        task {}.taskFlow().collect {
+            assertIs<StaticTaskContext>(it.context)
+        }
+    }
+
+    @Test
+    fun eventTypesExtendTaskEvent(): Unit = task().runBlocking {
+        val context = taskContext
+        val task = context.task
+
+        val level = TaskLogLevel.Trace
+        val result = Object()
+        val cause = Throwable()
+
+        val events = listOf(
+            TaskBeginEvent(task, context),
+            TaskLogEvent(task, context, level) {},
+            TaskFinishEvent(task, context, result),
+            TaskFailEvent(task, context, cause),
+        )
+
+        events.forEach { assertIs<TaskEvent>(it) }
+    }
+
 }

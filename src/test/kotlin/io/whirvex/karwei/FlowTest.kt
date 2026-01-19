@@ -23,6 +23,86 @@
  */
 package io.whirvex.karwei
 
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.assertDoesNotThrow
+import kotlin.test.*
+
 internal class FlowTest {
-    /* TODO: unit tests */
+
+    @Test
+    fun taskResultStateIsAccurate() {
+        val result = TaskFlowResult<Int>()
+        assertFalse { result.computedResult }
+        result.value = 0
+        assertTrue { result.computedResult }
+    }
+
+    @Test
+    fun taskResultThrowsOnPrematureGet() {
+        val result = TaskFlowResult<Int>()
+        val value by result /* delegate should use result.get() */
+        assertFailsWith<NoSuchElementException> { value }
+    }
+
+    @Test
+    fun taskResultThrowsOnDoubleSet() {
+        val result = TaskFlowResult<Int>()
+        result.value = 0
+        assertFailsWith<IllegalStateException> { result.value = 0 }
+    }
+
+    @Test
+    fun taskResultContainsSetValue() {
+        val result = TaskFlowResult<Int>()
+        result.value = 123
+        assertEquals(123, result.get())
+    }
+
+    @Test
+    fun taskResultAllowsNullables() {
+        val result = TaskFlowResult<Int?>()
+        result.value = null
+        assertNull(result.get())
+    }
+
+    @Test
+    fun taskFlowThrowsForComputedResult(): Unit = runBlocking {
+        val result = TaskFlowResult<Int>()
+        result.value = 0
+        assertFailsWith<IllegalArgumentException> {
+            task { 0 }.taskFlow(result).collect {}
+        }
+    }
+
+    @Test
+    fun taskFlowAllowsNullResult(): Unit = runBlocking {
+        assertDoesNotThrow {
+            task { 0 }.taskFlow(result = null).collect {}
+        }
+    }
+
+    @Test
+    fun taskFlowSavesResult(): Unit = runBlocking {
+        val result = TaskFlowResult<Int>()
+        task { 123 }.taskFlow(result).collect {}
+        assertEquals(123, result.get())
+    }
+
+    @Test
+    fun taskFlowIgnoresSubtasksResults(): Unit = runBlocking {
+        val runnable = task {
+            task { 123 }.runBlocking()
+            456 /* result should contain this, not 123 */
+        }
+
+        val result = TaskFlowResult<Int>()
+        runnable.taskFlow(result).collect {}
+        assertEquals(456, result.get())
+    }
+
+    @Test
+    fun taskFlowAllowsUnit(): Unit = runBlocking {
+        task {}.taskFlow().collect {}
+    }
+
 }

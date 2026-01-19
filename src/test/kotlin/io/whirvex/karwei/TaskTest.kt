@@ -23,6 +23,89 @@
  */
 package io.whirvex.karwei
 
+import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+
+private val TEST_TASK = task(name = "test")
+
 internal class TaskTest {
-    /* TODO: unit tests */
+
+    @Test
+    fun namedTaskUsesGivenName() {
+        assertEquals("test", TEST_TASK.name)
+    }
+
+    @Test
+    fun anonymousTaskUsesCorrectName() {
+        assertEquals("<anonymous task>", task().name)
+    }
+
+    @Test
+    fun isAnonymousReturnsTrueForAnonymousTask() {
+        assertTrue { task().isAnonymous() }
+        assertFalse { task().isNotAnonymous() }
+    }
+
+    @Test
+    fun isAnonymousReturnsFalseForNamedTask() {
+        assertFalse { TEST_TASK.isAnonymous() }
+        assertTrue { TEST_TASK.isNotAnonymous() }
+    }
+
+    @Test
+    fun runnableUsesGivenTask() {
+        val runnable = TEST_TASK.runnable {}
+        assertSame(TEST_TASK, runnable.task)
+    }
+
+    @Test
+    fun runnableUsesGivenBlock() {
+        val n = Random.nextInt()
+        val result = TEST_TASK.runnable { n }.runBlocking()
+        assertEquals(n, result)
+    }
+
+    @Test
+    fun invokeUsesGivenTask() {
+        val runnable = TEST_TASK {}
+        assertSame(TEST_TASK, runnable.task)
+    }
+
+    @Test
+    fun invokeUsesGivenBlock() {
+        val n = Random.nextInt()
+        val result = TEST_TASK { n }.runBlocking()
+        assertEquals(n, result)
+    }
+
+    @Test
+    fun runnableNamedTaskUsesGivenName() {
+        val runnable = task(TEST_TASK.name) {}
+        assertEquals(TEST_TASK.name, runnable.task.name)
+    }
+
+    @Test
+    fun runnableNamedTaskUsesGivenBlock() {
+        val n = Random.nextInt()
+        val result = task(TEST_TASK.name) { n }.runBlocking()
+        assertEquals(n, result)
+    }
+
+    @Test
+    fun runnableAnonymousTaskUsesAnonymousTask() {
+        val runnable = task {}
+        assertTrue { runnable.task.isAnonymous() }
+    }
+
+    @Test
+    fun runnableAnonymousTaskUsesGivenBlock() {
+        val n = Random.nextInt()
+        val result = task { n }.runBlocking()
+        assertEquals(n, result)
+    }
+
 }

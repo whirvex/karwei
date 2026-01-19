@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.whirvex"
-version = "1.0.0-ALPHA"
+version = "1.0.0"
 
 kotlin {
     jvmToolchain(jdkVersion = 21)
